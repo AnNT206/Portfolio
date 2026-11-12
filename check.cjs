@@ -1,0 +1,14 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const html = fs.readFileSync('index.html', 'utf8');
+const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+for (const match of html.matchAll(/href="#([^"]+)"/g)) assert(ids.has(match[1]), `Missing section: ${match[1]}`);
+for (const asset of ['style.css', 'script.js', 'resume.docx']) assert(fs.statSync(`${asset}`).size > 0);
+let click;
+const button = {addEventListener: (_, fn) => click = fn, setAttribute: (key, value) => button[key] = value};
+const document = {documentElement: {dataset: {theme: 'dark'}}, querySelector: () => button};
+vm.runInNewContext(fs.readFileSync('script.js', 'utf8'), {document});
+click(); assert.equal(document.documentElement.dataset.theme, 'light'); assert.equal(button['aria-label'], 'Switch to dark theme');
+click(); assert.equal(document.documentElement.dataset.theme, 'dark');
+console.log('Section links, assets and theme toggle passed.');
